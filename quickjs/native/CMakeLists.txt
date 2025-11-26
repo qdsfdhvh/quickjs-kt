@@ -127,6 +127,11 @@ if (LIBRARY_TYPE STREQUAL "shared")
     add_library(quickjs SHARED ${all_sources})
     if (TARGET_PLATFORM STREQUAL "android")
         target_link_libraries(quickjs log)
+        # Support for Android 64KB page size (Android 15+)
+        # This ensures compatibility with devices using 16KB page size
+        target_link_options(quickjs PRIVATE
+            -Wl,-z,max-page-size=65536
+        )
     endif ()
 elseif (LIBRARY_TYPE STREQUAL "static")
     add_library(quickjs STATIC ${all_sources})
