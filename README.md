@@ -5,6 +5,28 @@
 <img src="./media/async-eval-demo.gif" alt="The async eval demo">
 </div>
 
+## 🎉 Latest Update (v1.0.0-alpha14 - 2025-11-26)
+
+### QuickJS Version Update
+- ✅ Updated from `2024-02-14` to **`2025-04-26`** (latest version from [quickjs-zh](https://github.com/quickjs-zh/QuickJS))
+- Includes latest QuickJS improvements and bug fixes
+- Better performance and stability
+- Support for latest ES2023+ features
+
+### Android 64KB Page Size Support
+- ✅ Added support for **Android 15+ 64KB page size**
+- ✅ Ensures compatibility with new devices using 16KB page size
+- Linker flag: `-Wl,-z,max-page-size=65536`
+
+Starting from Android 15, some devices (especially those with new architectures) use 16KB page size instead of the traditional 4KB. To ensure forward compatibility, this library now builds with a maximum page size of 64KB.
+
+**Verify the build:**
+```bash
+readelf -l libquickjs.so | grep LOAD
+# Check that Align value is 0x10000 (64KB)
+```
+
+---
 
 This is a [QuickJS](https://bellard.org/quickjs/) binding for idiomatic Kotlin, inspired by Cash App's [Zipline](https://github.com/cashapp/zipline) (previously Duktape Android) but with more flexibility.
 
@@ -19,7 +41,7 @@ That's why I created this library, with some good features:
 - Simple and idiomatic Kotlin APIs, it's easy to define binding and evaluate arbitrary code
 - Highly integrated with **Kotlin Coroutines**, it is `async` and `suspend`ed. See [#Async](#async)
 - Kotlin Multiplatform targets, including `Android`, `JVM` and `Kotlin/Native`
-- The latest version of QuickJS
+- The latest version of QuickJS (2025-04-26) with Android 64KB page size support
 
 # Usages
 
@@ -386,13 +408,202 @@ If you find other suspicious errors, please feel free to open an issue to report
 
 # Development
 
-You may need these tools to build and run this project:
+## Prerequisites
 
-- Java JDK, both Windows, macOS, and Linux JDKs are required if you do a cross-compiling
-- Android SDK and NDK
-- [CMake](https://cmake.org/) The build system
-- [Ninja](https://ninja-build.org/) The build generator for CMake
-- [Zig](https://ziglang.org/) For cross-compiling the JNI libraries
+### Common Requirements
+- JDK 11 or higher
+- Gradle (provided via gradlew)
+- CMake 3.10+
+- Ninja Build System
+- Git
+
+### macOS Specific
+```bash
+# Install Zig compiler (for cross-compiling)
+brew install zig
+
+# Install CMake and Ninja (if not already installed)
+brew install cmake ninja
+```
+
+### Linux Specific
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y cmake ninja-build
+
+# Install Zig
+# Download from https://ziglang.org/download/
+```
+
+### Android Development (Optional)
+If you need to build for Android, install Android SDK and NDK.
+
+## Building and Publishing to Maven Local
+
+### Option 1: Using the Publish Script (Recommended)
+
+The script supports different modes for local development and CI/CD environments:
+
+```bash
+# Local development (detailed output)
+./publish-local.sh
+
+# CI mode (minimal output)
+./publish-local.sh --quiet
+# or
+./publish-local.sh --ci
+# or
+./publish-local.sh -q
+
+# Skip clean step (faster rebuild)
+./publish-local.sh --skip-clean
+
+# Show help
+./publish-local.sh --help
+```
+
+**Script features:**
+- ✅ Auto-detects OS and architecture (macOS/Linux, x64/ARM64)
+- ✅ Auto-finds and configures JAVA_HOME
+- ✅ Supports verbose and quiet modes
+- ✅ Auto-backs up local.properties (in verbose mode)
+- ✅ Friendly error messages and progress indicators
+- ✅ Unified script with parameter control
+
+### Option 2: Manual Gradle Commands
+
+```bash
+# 1. Set execution permissions
+chmod +x gradlew
+chmod +x quickjs/native/cmake/*.sh
+
+# 2. Configure local.properties (based on your platform)
+# macOS ARM64
+echo "JAVA_HOME_MACOS_AARCH64=/path/to/your/java/home" >> local.properties
+
+# macOS x64
+echo "JAVA_HOME_MACOS_X64=/path/to/your/java/home" >> local.properties
+
+# Linux x64
+echo "JAVA_HOME_LINUX_X64=/path/to/your/java/home" >> local.properties
+
+# Linux ARM64
+echo "JAVA_HOME_LINUX_AARCH64=/path/to/your/java/home" >> local.properties
+
+# 3. Build and publish
+./gradlew clean build publishToMavenLocal
+```
+
+## Published Modules
+
+After successful publishing to `~/.m2/repository`:
+
+1. **quickjs** - Core QuickJS engine (supports Android, iOS, macOS, Linux, Windows)
+2. **quickjs-converter-ktxserialization** - Kotlinx Serialization converter (multiplatform)
+3. **quickjs-converter-moshi** - Moshi JSON converter (Android, JVM)
+
+## Using in Your Project
+
+Add to your `build.gradle.kts`:
+
+```kotlin
+repositories {
+    mavenLocal()  // Add local Maven repository
+    mavenCentral()
+    // ... other repositories
+}
+
+dependencies {
+    implementation("io.github.qdsfdhvh:quickjs-kt:<version>")
+    
+    // Optional: Add converters
+    implementation("io.github.qdsfdhvh:quickjs-converter-ktxserialization:<version>")
+    // or
+    implementation("io.github.qdsfdhvh:quickjs-converter-moshi:<version>")
+}
+```
+
+## Troubleshooting
+
+### Issue 1: `zig` command not found
+```bash
+# macOS
+brew install zig
+
+# Linux
+# Download from https://ziglang.org/download/
+```
+
+### Issue 2: Permission denied errors
+```bash
+chmod +x gradlew
+chmod +x quickjs/native/cmake/*.sh
+```
+
+### Issue 3: JAVA_HOME not set
+```bash
+# macOS
+export JAVA_HOME=$(/usr/libexec/java_home)
+
+# Linux
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+# Or find your Java installation path
+```
+
+### Issue 4: CMake errors
+Ensure CMake 3.10+ and Ninja are installed:
+```bash
+cmake --version
+ninja --version
+```
+
+## CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Build and Publish
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Install Zig (macOS)
+      if: runner.os == 'macOS'
+      run: brew install zig
+    
+    - name: Install Zig (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        wget https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz
+        tar -xf zig-linux-x86_64-0.11.0.tar.xz
+        echo "$PWD/zig-linux-x86_64-0.11.0" >> $GITHUB_PATH
+    
+    - name: Publish to Maven Local
+      run: ./publish-local.sh --ci
+```
+
+## Version History
+
+| Version | QuickJS Version | Date | Changes |
+|---------|-----------------|------|---------|
+| 1.0.0-alpha14 | 2025-04-26 | 2025-11-26 | Update QuickJS to latest, add Android 64KB page support |
+| 1.0.0-alpha13 | 2024-02-14 | 2024-xx-xx | Previous version |
 
 # License
 
