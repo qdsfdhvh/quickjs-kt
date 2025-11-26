@@ -100,6 +100,9 @@ android {
                     "-DLIBRARY_TYPE=shared",
                 )
                 cFlags("-fstrict-aliasing")
+                // Support for Android 64KB page size (Android 15+)
+                // This flag ensures compatibility with 16KB page size devices
+                cppFlags("-fPIC")
             }
         }
 
