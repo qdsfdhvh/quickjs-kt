@@ -80,6 +80,7 @@ val cmakeFile = file("native/CMakeLists.txt")
 android {
     namespace = "com.dokar.quickjs"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+    ndkVersion = "28.0.13004108"  // Required for RISC-V support
 
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -89,7 +90,7 @@ android {
         consumerProguardFiles("consumer-rules.pro")
 
         ndk {
-            abiFilters += listOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
+            abiFilters += listOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a", "riscv64")
         }
 
         externalNativeBuild {
