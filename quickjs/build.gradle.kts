@@ -100,7 +100,11 @@ android {
                     "-DTARGET_PLATFORM=android",
                     "-DLIBRARY_TYPE=shared",
                 )
-                cFlags("-fstrict-aliasing")
+                cFlags(
+                    "-fstrict-aliasing",
+                    "-ffunction-sections",  // Enable function sections for dead code elimination
+                    "-fdata-sections"       // Enable data sections for dead code elimination
+                )
                 // Support for Android 64KB page size (Android 15+)
                 // This flag ensures compatibility with 16KB page size devices
                 cppFlags("-fPIC")
@@ -108,7 +112,8 @@ android {
         }
 
         packaging {
-            jniLibs.keepDebugSymbols += "**/libquickjs.so"
+            // Remove keepDebugSymbols to allow proper stripping
+            // jniLibs.keepDebugSymbols += "**/libquickjs.so"
         }
     }
 
@@ -118,11 +123,18 @@ android {
                 cmake {
                     arguments("-DCMAKE_BUILD_TYPE=MinSizeRel")
                     cFlags(
-                        "-g0",
-                        "-Os",
-                        "-fomit-frame-pointer",
-                        "-DNDEBUG",
-                        "-fvisibility=hidden"
+                        "-g0",                          // Remove all debug info
+                        "-Oz",                          // Aggressive size optimization (better than -Os)
+                        "-fomit-frame-pointer",         // Omit frame pointer
+                        "-DNDEBUG",                     // Disable assertions
+                        "-fvisibility=hidden",          // Hide symbols by default
+                        "-fno-unwind-tables",           // Remove unwind tables
+                        "-fno-asynchronous-unwind-tables" // Remove async unwind tables
+                    )
+                    // Linker flags for dead code elimination
+                    arguments(
+                        "-DANDROID_LD=lld",             // Use LLD linker explicitly
+                        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gc-sections -Wl,--strip-all"
                     )
                 }
             }
